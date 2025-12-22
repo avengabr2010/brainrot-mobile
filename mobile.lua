@@ -1,4 +1,4 @@
--- 🧠 STEAL A BRAINROT FINDER V2 – UI MODERNE + SETTINGS CORRECTS
+-- 🧠 STEAL A BRAINROT FINDER V3 – UI MODERNE + SETTINGS FONCTIONNELS
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
@@ -7,7 +7,7 @@ local player = Players.LocalPlayer
 
 -- ===== SETTINGS =====
 getgenv().MinValue = 0
-getgenv().WantedRarity = "" -- vide = toutes
+getgenv().WantedRarity = ""
 getgenv().Running = false
 
 -- ===== COLORS / STYLE =====
@@ -24,32 +24,32 @@ local COLORS = {
 
 -- ===== UI =====
 local gui = Instance.new("ScreenGui", game.CoreGui)
-gui.Name = "BrainrotFinderV2"
+gui.Name = "BrainrotFinderV3"
 
 local main = Instance.new("Frame", gui)
 main.Size = UDim2.new(0.94,0,0.9,0)
 main.Position = UDim2.new(0.03,0,0.05,0)
 main.BackgroundColor3 = Color3.fromRGB(25,25,25)
-main.BackgroundTransparency = 0.05
 main.Active = true
 main.Draggable = true
 Instance.new("UICorner", main).CornerRadius = UDim.new(0,20)
 
 local title = Instance.new("TextLabel", main)
 title.Size = UDim2.new(1,0,0,50)
-title.Text = "🧠 Brainrot Finder V2"
+title.Position = UDim2.new(0,0,0,0)
+title.Text = "🧠 Brainrot Finder V3"
 title.TextColor3 = Color3.fromRGB(255,255,255)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 20
 title.BackgroundTransparency = 1
 
--- Settings inputs
+-- ===== SETTINGS INPUTS =====
 local minBox = Instance.new("TextBox", main)
 minBox.Size = UDim2.new(0.42,0,0,35)
 minBox.Position = UDim2.new(0.03,0,0,60)
 minBox.PlaceholderText = "Valeur min/sec"
 minBox.BackgroundColor3 = Color3.fromRGB(35,35,35)
-minBox.TextColor3 = Color3.new(1,1,1)
+minBox.TextColor3 = Color3.fromRGB(255,255,255)
 Instance.new("UICorner", minBox).CornerRadius = UDim.new(0,10)
 
 local rarityBox = Instance.new("TextBox", main)
@@ -57,7 +57,7 @@ rarityBox.Size = UDim2.new(0.42,0,0,35)
 rarityBox.Position = UDim2.new(0.5,0,0,60)
 rarityBox.PlaceholderText = "Rareté (optionnel)"
 rarityBox.BackgroundColor3 = Color3.fromRGB(35,35,35)
-rarityBox.TextColor3 = Color3.new(1,1,1)
+rarityBox.TextColor3 = Color3.fromRGB(255,255,255)
 Instance.new("UICorner", rarityBox).CornerRadius = UDim.new(0,10)
 
 local startBtn = Instance.new("TextButton", main)
@@ -68,7 +68,7 @@ startBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
 startBtn.TextColor3 = Color3.fromRGB(255,255,255)
 Instance.new("UICorner", startBtn).CornerRadius = UDim.new(0,12)
 
--- List scrollable
+-- ===== LIST SCROLLABLE =====
 local list = Instance.new("ScrollingFrame", main)
 list.Position = UDim2.new(0,10,0,150)
 list.Size = UDim2.new(1,-20,1,-160)
@@ -104,7 +104,7 @@ local function addResult(serverId, brainrotName, value, rarity)
 	joinBtn.Position = UDim2.new(0.72,0,0.2,0)
 	joinBtn.Text = "JOIN"
 	joinBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
-	joinBtn.TextColor3 = Color3.new(1,1,1)
+	joinBtn.TextColor3 = Color3.fromRGB(255,255,255)
 	Instance.new("UICorner", joinBtn).CornerRadius = UDim.new(0,10)
 	joinBtn.MouseButton1Click:Connect(function()
 		TeleportService:TeleportToPlaceInstance(game.PlaceId, serverId, player)
@@ -171,7 +171,7 @@ local function autoFinder()
 	while getgenv().Running do
 		scanCurrentServer()
 		local servers = getServers()
-		table.sort(servers) -- simple tri
+		table.sort(servers, function(a,b) return a>b end)
 		for _, sId in pairs(servers) do
 			if not getgenv().Running then break end
 			TeleportService:TeleportToPlaceInstance(game.PlaceId, sId, player)

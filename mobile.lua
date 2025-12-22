@@ -1,4 +1,4 @@
--- 🧠 STEAL A BRAINROT FINDER V3 – UI MODERNE + SETTINGS FONCTIONNELS
+-- 🧠 STEAL A BRAINROT FINDER – VERSION FINALE
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
@@ -10,7 +10,7 @@ getgenv().MinValue = 0
 getgenv().WantedRarity = ""
 getgenv().Running = false
 
--- ===== COLORS / STYLE =====
+-- ===== COLORS =====
 local COLORS = {
 	Commun = Color3.fromRGB(150,150,150),
 	Rare = Color3.fromRGB(64,128,255),
@@ -24,7 +24,7 @@ local COLORS = {
 
 -- ===== UI =====
 local gui = Instance.new("ScreenGui", game.CoreGui)
-gui.Name = "BrainrotFinderV3"
+gui.Name = "BrainrotFinderFinal"
 
 local main = Instance.new("Frame", gui)
 main.Size = UDim2.new(0.94,0,0.9,0)
@@ -37,7 +37,7 @@ Instance.new("UICorner", main).CornerRadius = UDim.new(0,20)
 local title = Instance.new("TextLabel", main)
 title.Size = UDim2.new(1,0,0,50)
 title.Position = UDim2.new(0,0,0,0)
-title.Text = "🧠 Brainrot Finder V3"
+title.Text = "🧠 Brainrot Finder Final"
 title.TextColor3 = Color3.fromRGB(255,255,255)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 20
@@ -111,7 +111,7 @@ local function addResult(serverId, brainrotName, value, rarity)
 	end)
 end
 
-local function scanCurrentServer()
+local function scanServerForBrainrots()
 	local minValue = tonumber(minBox.Text) or 0
 	local wantedRarity = string.lower(rarityBox.Text or "")
 	local bestValue = 0
@@ -148,10 +148,10 @@ end
 
 local function getServers()
 	local servers = {}
-	local pageCursor = ""
+	local cursor = ""
 	repeat
 		local url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?limit=100"
-		if pageCursor ~= "" then url = url.."&cursor="..pageCursor end
+		if cursor ~= "" then url = url.."&cursor="..cursor end
 		local suc, data = pcall(function()
 			return HttpService:JSONDecode(game:HttpGet(url))
 		end)
@@ -161,17 +161,16 @@ local function getServers()
 				table.insert(servers, s.id)
 			end
 		end
-		pageCursor = data.nextPageCursor or ""
-	until pageCursor == nil or pageCursor == ""
+		cursor = data.nextPageCursor or ""
+	until cursor == nil or cursor == ""
 	return servers
 end
 
 local function autoFinder()
 	getgenv().Running = true
 	while getgenv().Running do
-		scanCurrentServer()
+		scanServerForBrainrots()
 		local servers = getServers()
-		table.sort(servers, function(a,b) return a>b end)
 		for _, sId in pairs(servers) do
 			if not getgenv().Running then break end
 			TeleportService:TeleportToPlaceInstance(game.PlaceId, sId, player)

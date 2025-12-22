@@ -1,32 +1,21 @@
--- BRAINROT FINDER PRO - INTERSERVERS
+-- 🧠 STEAL A BRAINROT - REAL FINDER (AUTO DETECT)
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
-local RunService = game:GetService("RunService")
 
--- ========== SETTINGS ==========
+-- ===== SETTINGS PAR DEFAUT =====
+local MIN_VALUE = 0
+local TARGET_RARITY = "" -- vide = toutes
 
-getgenv().MinValuePerSec = 30000
-getgenv().WantedRarity = "" -- vide = toutes
-getgenv().AutoHop = true
-
-local RarityList = {"", "Commun", "Rare", "Epique", "Légendaire", "Mythique", "Brainrot God", "Secret", "OG"}
-
-local PlaceId = game.PlaceId
-local visitedServers = {}
-local foundList = {}
-
--- ================== UI ==================
-
+-- ===== UI =====
 local gui = Instance.new("ScreenGui", game.CoreGui)
-gui.Name = "BrainrotFinderUI"
+gui.Name = "BrainrotFinder"
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0.92,0,0.85,0)
-main.Position = UDim2.new(0.04,0,0.08,0)
-main.BackgroundColor3 = Color3.fromRGB(25,25,25)
+main.Size = UDim2.new(0.94,0,0.85,0)
+main.Position = UDim2.new(0.03,0,0.08,0)
+main.BackgroundColor3 = Color3.fromRGB(20,20,20)
 main.Active = true
 main.Draggable = true
 Instance.new("UICorner", main).CornerRadius = UDim.new(0,16)
@@ -34,134 +23,98 @@ Instance.new("UICorner", main).CornerRadius = UDim.new(0,16)
 local title = Instance.new("TextLabel", main)
 title.Size = UDim2.new(1,0,0,45)
 title.BackgroundTransparency = 1
-title.Text = "🧠 Brainrot Finder Pro"
+title.Text = "🧠 Brainrot Finder (Auto)"
 title.TextColor3 = Color3.new(1,1,1)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 18
 
--- SETTINGS PANEL
-local settingsFrame = Instance.new("Frame", main)
-settingsFrame.Size = UDim2.new(1, -20, 0, 90)
-settingsFrame.Position = UDim2.new(0,10,0,50)
-settingsFrame.BackgroundColor3 = Color3.fromRGB(35,35,35)
-Instance.new("UICorner", settingsFrame).CornerRadius = UDim.new(0,12)
-
--- MIN VALUE
-local minLabel = Instance.new("TextLabel", settingsFrame)
-minLabel.Size = UDim2.new(0.3,0,1,0)
-minLabel.Position = UDim2.new(0,10,0,0)
-minLabel.BackgroundTransparency = 1
-minLabel.Text = "Min/sec:"
-minLabel.TextColor3 = Color3.new(1,1,1)
-minLabel.Font = Enum.Font.Gotham
-minLabel.TextSize = 14
-minLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local minBox = Instance.new("TextBox", settingsFrame)
-minBox.Size = UDim2.new(0.25,0,0.7,0)
-minBox.Position = UDim2.new(0.3,10,0.15,0)
-minBox.BackgroundColor3 = Color3.fromRGB(45,45,45)
+-- SETTINGS
+local minBox = Instance.new("TextBox", main)
+minBox.Size = UDim2.new(0.4,0,0,40)
+minBox.Position = UDim2.new(0.05,0,0,50)
+minBox.PlaceholderText = "Min valeur / sec"
+minBox.Text = ""
+minBox.BackgroundColor3 = Color3.fromRGB(35,35,35)
 minBox.TextColor3 = Color3.new(1,1,1)
-minBox.Text = tostring(getgenv().MinValuePerSec)
-minBox.ClearTextOnFocus = false
 Instance.new("UICorner", minBox).CornerRadius = UDim.new(0,10)
 
--- RARITY DROPDOWN
-local rarityLabel = Instance.new("TextLabel", settingsFrame)
-rarityLabel.Size = UDim2.new(0.25,0,1,0)
-rarityLabel.Position = UDim2.new(0.6,10,0,0)
-rarityLabel.BackgroundTransparency = 1
-rarityLabel.Text = "Rarity:"
-rarityLabel.TextColor3 = Color3.new(1,1,1)
-rarityLabel.Font = Enum.Font.Gotham
-rarityLabel.TextSize = 14
-rarityLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local rarityBox = Instance.new("TextBox", settingsFrame)
-rarityBox.Size = UDim2.new(0.25,0,0.7,0)
-rarityBox.Position = UDim2.new(0.85,0,0.15,0)
-rarityBox.BackgroundColor3 = Color3.fromRGB(45,45,45)
+local rarityBox = Instance.new("TextBox", main)
+rarityBox.Size = UDim2.new(0.4,0,0,40)
+rarityBox.Position = UDim2.new(0.55,0,0,50)
+rarityBox.PlaceholderText = "Rareté (optionnel)"
+rarityBox.Text = ""
+rarityBox.BackgroundColor3 = Color3.fromRGB(35,35,35)
 rarityBox.TextColor3 = Color3.new(1,1,1)
-rarityBox.Text = getgenv().WantedRarity
-rarityBox.ClearTextOnFocus = false
 Instance.new("UICorner", rarityBox).CornerRadius = UDim.new(0,10)
 
--- LIST OF SERVERS
+-- LISTE
 local list = Instance.new("ScrollingFrame", main)
-list.Position = UDim2.new(0,10,0,150)
-list.Size = UDim2.new(1,-20,1,-160)
-list.BackgroundTransparency = 1
+list.Position = UDim2.new(0,10,0,100)
+list.Size = UDim2.new(1,-20,1,-110)
 list.CanvasSize = UDim2.new(0,0,0,0)
 list.ScrollBarImageTransparency = 0.3
 
 local layout = Instance.new("UIListLayout", list)
 layout.Padding = UDim.new(0,10)
 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    list.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+20)
+	list.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 10)
 end)
 
--- ========== FUNCTIONS ==========
+-- ===== FINDER LOGIC =====
 
-local function notify(msg)
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title="Brainrot Finder",
-        Text=msg,
-        Duration=4
-    })
+local function addResult(name, rarity, value)
+	local btn = Instance.new("TextLabel", list)
+	btn.Size = UDim2.new(1,-10,0,60)
+	btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+	btn.TextWrapped = true
+	btn.Text = name.." | "..rarity.." | "..value.." / sec"
+	btn.TextColor3 = Color3.new(1,1,1)
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 14
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0,12)
 end
 
-local function addResult(name, rarity, value, jobId)
-    local btn = Instance.new("TextButton", list)
-    btn.Size = UDim2.new(1,-10,0,60)
-    btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
-    btn.TextWrapped = true
-    btn.Text = name.." | "..rarity.." | "..value.."/sec\n[TAP TO JOIN]"
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,14)
+-- AUTO DETECTION
+local bestValue = 0
+local bestName = nil
+local bestRarity = "?"
 
-    btn.MouseButton1Click:Connect(function()
-        TeleportService:TeleportToPlaceInstance(PlaceId, jobId, player)
-    end)
+task.wait(3)
 
-    list.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+20)
-    if rarity == "Brainrot God" or rarity == "Secret" or rarity == "OG" then
-        notify("Found "..rarity.." : "..name)
-    end
+MIN_VALUE = tonumber(minBox.Text) or 0
+TARGET_RARITY = string.lower(rarityBox.Text or "")
+
+for _, obj in pairs(workspace:GetDescendants()) do
+	if obj:IsA("Model") then
+		local rarity, value
+
+		for _, v in pairs(obj:GetDescendants()) do
+			if v:IsA("StringValue") and string.find(string.lower(v.Name),"rar") then
+				rarity = v.Value
+			end
+			if v:IsA("NumberValue") and (
+				string.find(string.lower(v.Name),"sec")
+				or string.find(string.lower(v.Name),"value")
+				or string.find(string.lower(v.Name),"cash")
+			) then
+				value = v.Value
+			end
+		end
+
+		if value and value >= MIN_VALUE then
+			if TARGET_RARITY == "" or string.find(string.lower(rarity or ""), TARGET_RARITY) then
+				if value > bestValue then
+					bestValue = value
+					bestName = obj.Name
+					bestRarity = rarity or "?"
+				end
+			end
+		end
+	end
 end
 
--- SCAN SERVER
-local function scanServer()
-    getgenv().MinValuePerSec = tonumber(minBox.Text) or 0
-    getgenv().WantedRarity = rarityBox.Text or ""
-
-    local folder = workspace:FindFirstChild("Brainrots") or workspace
-    for _, b in pairs(folder:GetDescendants()) do
-        if b:IsA("Model") and b:FindFirstChild("Rarity") and b:FindFirstChild("ValuePerSecond") then
-            local rarity = b.Rarity.Value
-            local value = b.ValuePerSecond.Value
-            if value >= getgenv().MinValuePerSec and 
-               (getgenv().WantedRarity=="" or string.lower(rarity)==string.lower(getgenv().WantedRarity)) then
-                addResult(b.Name, rarity, value, game.JobId)
-            end
-        end
-    end
+if bestName then
+	addResult(bestName, bestRarity, bestValue)
+else
+	addResult("Aucun brainrot trouvé", "-", "-")
 end
-
--- ================= SERVER HOP =================
-task.spawn(function()
-    scanServer()
-    if getgenv().AutoHop then
-        task.wait(2)
-        local body = game:HttpGet("https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100")
-        local servers = HttpService:JSONDecode(body).data
-        for _, s in pairs(servers) do
-            if not visitedServers[s.id] then
-                visitedServers[s.id] = true
-                TeleportService:TeleportToPlaceInstance(PlaceId, s.id, player)
-                break
-            end
-        end
-    end
-end)

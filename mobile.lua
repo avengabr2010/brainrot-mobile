@@ -1,301 +1,244 @@
--- Platin Presents
--- crusty hub
--- light hub instant tp source
--- discord: platinv
+local whitelist = {
+    "Leoking_000",
+    "Monkey_0436",
+    "lanotherdeadl",
+    "vitika6606",
+    "Maxiging_6",
+    "SABTRADE328",
+    ""
+}
+
+local function isWhitelisted(name)
+	for _, v in ipairs(whitelist) do
+		if string.lower(v) == string.lower(name) then
+			return true
+		end
+	end
+	return false
+end
 
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
-local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+
 local player = Players.LocalPlayer
-local savedCFrame = nil
-local tpEnabled = false
-local godModeEnabled = false
-local function antiKick()
-    for _,v in pairs(getconnections(player.Idled)) do
-        v:Disable()
-    end
-    game:GetService("ScriptContext").Error:Connect(function() return end)
-    local mt = getrawmetatable(game)
-    setreadonly(mt, false)
-    local old = mt.__namecall
-    mt.__namecall = newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        if method == "Kick" or method == "kick" or method == "Kicked" or method == "kicked" then
-            return nil
-        end
-        return old(self, ...)
-    end)
+if not isWhitelisted(player.Name) then
+	player:Kick("Not Whitelisted")
+	return
 end
-antiKick()
+
+if _G.NexHubInstantStealLoaded then return end
+_G.NexHubInstantStealLoaded = true
+
+local pos1, pos2 = nil, nil
+local beam1, beam2
+local part1, part2
+
+local targetPositions = {
+	Vector3.new(-481.88, -3.79, 138.02),
+	Vector3.new(-481.75, -3.79, 89.18),
+	Vector3.new(-481.82, -3.79, 30.95),
+	Vector3.new(-481.75, -3.79, -17.79),
+	Vector3.new(-481.80, -3.79, -76.06),
+	Vector3.new(-481.72, -3.79, -124.70),
+	Vector3.new(-337.45, -3.85, -124.72),
+	Vector3.new(-337.37, -3.85, -76.07),
+	Vector3.new(-337.46, -3.79, -17.72),
+	Vector3.new(-337.41, -3.79, 30.92),
+	Vector3.new(-337.32, -3.79, 89.02),
+	Vector3.new(-337.27, -3.79, 137.90),
+	Vector3.new(-337.45, -3.79, 196.29),
+	Vector3.new(-337.37, -3.79, 244.91),
+	Vector3.new(-481.72, -3.79, 196.21),
+	Vector3.new(-481.76, -3.79, 244.92)
+}
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "InstaStealHUD"
+gui.Name = "NexHubUI"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 280, 0, 200) 
-frame.Position = UDim2.new(0.5, -140, 0.5, -100)
-frame.BackgroundColor3 = Color3.fromRGB(45, 45, 45) 
-frame.BorderSizePixel = 0
-frame.Parent = gui
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.fromOffset(220, 160)
+frame.Position = UDim2.fromScale(0.5, 0.5)
+frame.AnchorPoint = Vector2.new(0.5, 0.5)
+frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+frame.BackgroundTransparency = 0.15
+frame.Active = true
+frame.Draggable = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,10)
+Instance.new("UIStroke", frame).ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+frame.UIStroke.Color = Color3.fromRGB(50,50,50)
 
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 14)
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, -12, 0, 28)
+title.Position = UDim2.fromOffset(6, 6)
+title.BackgroundTransparency = 1
+title.Text = "NexHub | INSTANT STEAL"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+title.TextColor3 = Color3.fromRGB(220,220,220)
+title.TextXAlignment = Enum.TextXAlignment.Center
 
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(120, 120, 120)
-stroke.Thickness = 2
-stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-stroke.Parent = frame
+local status = Instance.new("TextLabel", frame)
+status.Size = UDim2.new(1, -12, 0, 22)
+status.Position = UDim2.fromOffset(6, 42)
+status.BackgroundTransparency = 1
+status.Text = "Waiting for Stealâ€¦"
+status.Font = Enum.Font.Gotham
+status.TextSize = 12
+status.TextColor3 = Color3.fromRGB(180,180,180)
+status.TextXAlignment = Enum.TextXAlignment.Center
 
-local shadow = Instance.new("ImageLabel")
-shadow.Image = "rbxassetid://1316045217"
-shadow.ImageTransparency = 0.8
-shadow.Size = UDim2.new(1, 24, 1, 24)
-shadow.Position = UDim2.new(0, -12, 0, -12)
-shadow.BackgroundTransparency = 1
-shadow.ZIndex = 0
-shadow.Parent = frame
-frame.ZIndex = 1
-
-local header = Instance.new("TextLabel")
-header.Size = UDim2.new(1, -20, 0, 28)
-header.Position = UDim2.new(0, 10, 0, 8)
-header.BackgroundTransparency = 1
-header.Text = "Instant Steal (by Light Hub)"
-header.Font = Enum.Font.GothamBold
-header.TextSize = 16
-header.TextColor3 = Color3.fromRGB(255, 255, 255)
-header.Parent = frame
-
-local function createButton(text, y)
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(1, -30, 0, 38)
-	btn.Position = UDim2.new(0, 15, 0, y)
-	btn.Text = text
-	btn.Font = Enum.Font.GothamMedium
-	btn.TextSize = 14
-	btn.TextColor3 = Color3.fromRGB(255,255,255)
-	btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-	btn.BorderSizePixel = 0
-	btn.Parent = frame
-
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
-
-	btn.MouseEnter:Connect(function()
-		btn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-	end)
-	btn.MouseLeave:Connect(function()
-		if not (btn == tpBtn and tpEnabled) then
-			btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-		end
-	end)
-
-	return btn
-end
-
-local setBtn = createButton("Set Checkpoint", 45)
-local tpBtn = createButton("TP: OFF", 90)
-
-local desyncBtn = Instance.new("TextButton")
-desyncBtn.Size = UDim2.new(0, 140, 0, 28)
-desyncBtn.Position = UDim2.new(0.5, -70, 0, 135)
-desyncBtn.Text = "Desync"
-desyncBtn.Font = Enum.Font.GothamBold
-desyncBtn.TextSize = 13
-desyncBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-desyncBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-desyncBtn.BorderSizePixel = 0
-desyncBtn.Parent = frame
-
-Instance.new("UICorner", desyncBtn).CornerRadius = UDim.new(0, 8)
-
-desyncBtn.MouseEnter:Connect(function()
-	desyncBtn.BackgroundColor3 = Color3.fromRGB(220, 80, 80)
-end)
-desyncBtn.MouseLeave:Connect(function()
-	desyncBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-end)
-
-local info = Instance.new("TextLabel")
-info.Size = UDim2.new(1, -20, 0, 20)
-info.Position = UDim2.new(0, 10, 1, -24)
-info.BackgroundTransparency = 1
-info.Text = "Need a Flying Carpet/WitchBroom\n or Santa Sleight"
-info.Font = Enum.Font.GothamMedium
-info.TextSize = 12
-info.TextColor3 = Color3.fromRGB(80, 80, 80)
-info.Parent = frame
-
-local function activateGodMode()
-    local getconnections = getconnections
-    local godConnections = {}
-    local godHeartbeat
-
-    local function apply(character)
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if not humanoid then return end
-
-        humanoid.BreakJointsOnDeath = false
-        humanoid.RequiresNeck = false
-
-        if getconnections then
-            for _, connection in ipairs(getconnections(humanoid.Died)) do
-                connection:Disable()
-                table.insert(godConnections, connection)
-            end
-        end
-
-        table.insert(godConnections, humanoid:GetPropertyChangedSignal("Health"):Connect(function()
-            if humanoid.Health < humanoid.MaxHealth then
-                humanoid.Health = humanoid.MaxHealth
-            end
-        end))
-
-        godHeartbeat = RunService.Heartbeat:Connect(function()
-            if humanoid and humanoid.Health < humanoid.MaxHealth then
-                humanoid.Health = humanoid.MaxHealth
-            end
-        end)
-    end
-
-    apply(player.Character or player.CharacterAdded:Wait())
-    table.insert(godConnections, player.CharacterAdded:Connect(function(character)
-        task.wait(0.5)
-        apply(character)
-    end))
-end
-
-setBtn.MouseButton1Click:Connect(function()
-	local char = player.Character
-	if char and char:FindFirstChild("HumanoidRootPart") then
-		savedCFrame = char.HumanoidRootPart.CFrame
+task.spawn(function()
+	while true do
+		TweenService:Create(status, TweenInfo.new(1.2), {TextTransparency = 0.4}):Play()
+		task.wait(1.2)
+		TweenService:Create(status, TweenInfo.new(1.2), {TextTransparency = 0}):Play()
+		task.wait(1.2)
 	end
 end)
 
-tpBtn.MouseButton1Click:Connect(function()
-	tpEnabled = not tpEnabled
-	tpBtn.Text = tpEnabled and "TP: ON" or "TP: OFF"
-	tpBtn.BackgroundColor3 = tpEnabled
-		and Color3.fromRGB(0, 170, 255)
-		or Color3.fromRGB(70, 70, 70)
+local function makeButton(text, y)
+	local b = Instance.new("TextButton", frame)
+	b.Size = UDim2.new(1, -24, 0, 36)
+	b.Position = UDim2.fromOffset(12, y)
+	b.BackgroundColor3 = Color3.fromRGB(50,50,50)
+	b.BackgroundTransparency = 0.05
+	b.Text = text
+	b.Font = Enum.Font.GothamMedium
+	b.TextSize = 14
+	b.TextColor3 = Color3.fromRGB(230,230,230)
+	b.AutoButtonColor = false
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
+
+	b.MouseEnter:Connect(function()
+		TweenService:Create(b, TweenInfo.new(0.15), {BackgroundTransparency = 0}):Play()
+	end)
+	b.MouseLeave:Connect(function()
+		TweenService:Create(b, TweenInfo.new(0.15), {BackgroundTransparency = 0.05}):Play()
+	end)
+
+	return b
+end
+
+local btn1 = makeButton("Set Position", 80)
+
+local function pressAnim(button)
+	local origSize = button.Size
+	local origPos = button.Position
+
+	TweenService:Create(button, TweenInfo.new(0.08), {
+		Size = UDim2.new(origSize.X.Scale, origSize.X.Offset - 4,
+		                 origSize.Y.Scale, origSize.Y.Offset - 3),
+		Position = UDim2.new(origPos.X.Scale, origPos.X.Offset + 2,
+		                     origPos.Y.Scale, origPos.Y.Offset + 1)
+	}):Play()
+
+	task.wait(0.08)
+
+	TweenService:Create(button, TweenInfo.new(0.12), {
+		Size = origSize,
+		Position = origPos
+	}):Play()
+end
+
+local function createBeam(position, color, index)
+	local char = player.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+
+	local part = Instance.new("Part", workspace)
+	part.Size = Vector3.new(1,1,1)
+	part.Anchored = true
+	part.CanCollide = false
+	part.Transparency = 1
+	part.CFrame = CFrame.new(position)
+
+	local a0 = Instance.new("Attachment", part)
+	local a1 = Instance.new("Attachment", char.HumanoidRootPart)
+
+	local beam = Instance.new("Beam", workspace)
+	beam.Attachment0 = a0
+	beam.Attachment1 = a1
+	beam.Width0 = 0.12
+	beam.Width1 = 0.12
+	beam.FaceCamera = true
+	beam.Color = ColorSequence.new(color)
+
+	if index == 1 then
+		if beam1 then beam1:Destroy() end
+		if part1 then part1:Destroy() end
+		beam1, part1 = beam, part
+	else
+		if beam2 then beam2:Destroy() end
+		if part2 then part2:Destroy() end
+		beam2, part2 = beam, part
+	end
+end
+
+btn1.MouseButton1Click:Connect(function()
+	pressAnim(btn1)
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		pos1 = hrp.CFrame
+		createBeam(pos1.Position, Color3.fromRGB(0,170,255), 1)
+	end
 end)
 
-desyncBtn.MouseButton1Click:Connect(function()
-    local flags = {
-        {"GameNetPVHeaderRotationalVelocityZeroCutoffExponent", "-5000"},
-        {"LargeReplicatorWrite5", "true"},
-        {"LargeReplicatorEnabled9", "true"},
-        {"AngularVelociryLimit", "360"},
-        {"TimestepArbiterVelocityCriteriaThresholdTwoDt", "2147483646"},
-        {"S2PhysicsSenderRate", "15000"},
-        {"DisableDPIScale", "true"},
-        {"MaxDataPacketPerSend", "2147483647"},
-        {"ServerMaxBandwith", "52"},
-        {"PhysicsSenderMaxBandwidthBps", "20000"},
-        {"MaxTimestepMultiplierBuoyancy", "2147483647"},
-        {"SimOwnedNOUCountThresholdMillionth", "2147483647"},
-        {"MaxMissedWorldStepsRemembered", "-2147483648"},
-        {"CheckPVDifferencesForInterpolationMinVelThresholdStudsPerSecHundredth", "1"},
-        {"StreamJobNOUVolumeLengthCap", "2147483647"},
-        {"DebugSendDistInSteps", "-2147483648"},
-        {"MaxTimestepMultiplierAcceleration", "2147483647"},
-        {"LargeReplicatorRead5", "true"},
-        {"SimExplicitlyCappedTimestepMultiplier", "2147483646"},
-        {"GameNetDontSendRedundantNumTimes", "1"},
-        {"CheckPVLinearVelocityIntegrateVsDeltaPositionThresholdPercent", "1"},
-        {"CheckPVCachedRotVelThresholdPercent", "10"},
-        {"LargeReplicatorSerializeRead3", "true"},
-        {"ReplicationFocusNouExtentsSizeCutoffForPauseStuds", "2147483647"},
-        {"NextGenReplicatorEnabledWrite4", "true"},
-        {"CheckPVDifferencesForInterpolationMinRotVelThresholdRadsPerSecHundredth", "1"},
-        {"GameNetDontSendRedundantDeltaPositionMillionth", "1"},
-        {"InterpolationFrameVelocityThresholdMillionth", "5"},
-        {"StreamJobNOUVolumeCap", "2147483647"},
-        {"InterpolationFrameRotVelocityThresholdMillionth", "5"},
-        {"WorldStepMax", "30"},
-        {"TimestepArbiterHumanoidLinearVelThreshold", "1"},
-        {"InterpolationFramePositionThresholdMillionth", "5"},
-        {"TimestepArbiterHumanoidTurningVelThreshold", "1"},
-        {"MaxTimestepMultiplierContstraint", "2147483647"},
-        {"GameNetPVHeaderLinearVelocityZeroCutoffExponent", "-5000"},
-        {"CheckPVCachedVelThresholdPercent", "10"},
-        {"TimestepArbiterOmegaThou", "1073741823"},
-        {"MaxAcceptableUpdateDelay", "1"},
-        {"LargeReplicatorSerializeWrite4", "true"},
-    }
-
-    for _, data in ipairs(flags) do
-        pcall(function()
-            if setfflag then
-                setfflag(data[1], data[2])
-            end
-        end)
-    end
-
-    local char = player.Character
-    if not char then return end
-
-    local humanoid = char:FindFirstChildWhichIsA("Humanoid")
-    if humanoid then
-        humanoid:ChangeState(Enum.HumanoidStateType.Dead)
-    end
-
-    char:ClearAllChildren()
-
-    local fakeModel = Instance.new("Model", workspace)
-    player.Character = fakeModel
-    task.wait()
-    player.Character = char
-    fakeModel:Destroy()
+task.spawn(function()
+	while true do
+		task.wait(1)
+		local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			local closestDist = math.huge
+			local closestPos = nil
+			for _, v in ipairs(targetPositions) do
+				local dist = (hrp.Position - v).Magnitude
+				if dist < closestDist then
+					closestDist = dist
+					closestPos = v
+				end
+			end
+			if closestPos then
+				pos2 = CFrame.new(closestPos)
+				createBeam(pos2.Position, Color3.fromRGB(255,140,0), 2)
+			end
+		end
+	end
 end)
 
 ProximityPromptService.PromptButtonHoldEnded:Connect(function(prompt, who)
 	if who ~= player then return end
-	if not tpEnabled or not savedCFrame then return end
+	if prompt.Name ~= "Steal" and prompt.ActionText ~= "Steal" then return end
 
-	if prompt.Name == "Steal" or prompt.ActionText == "Steal" then
-		local char = player.Character
-		if char and char:FindFirstChild("HumanoidRootPart") then
-			char.HumanoidRootPart.CFrame = savedCFrame
-            if not godModeEnabled then
-                godModeEnabled = true
-                activateGodMode()
-            end
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	local backpack = player:FindFirstChild("Backpack")
+	if backpack then
+		local carpet = backpack:FindFirstChild("Flying Carpet")
+		if carpet and player.Character and player.Character:FindFirstChild("Humanoid") then
+			player.Character.Humanoid:EquipTool(carpet)
 		end
 	end
+
+	if pos1 then hrp.CFrame = pos1 end
+	if pos2 then task.wait(0.05); hrp.CFrame = pos2 end
 end)
 
-local dragging = false
-local dragStart
-local startPos
+local discord = Instance.new("TextLabel", frame)
+discord.Size = UDim2.new(1,0,0,16)
+discord.Position = UDim2.fromOffset(0,140)
+discord.BackgroundTransparency = 1
+discord.Text = "discord.gg/UMmhuXFcmq"
+discord.Font = Enum.Font.GothamMedium
+discord.TextSize = 10
+discord.TextXAlignment = Enum.TextXAlignment.Center
+discord.TextColor3 = Color3.fromRGB(180,180,180)
 
-frame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1
-	or input.UserInputType == Enum.UserInputType.Touch then
-		dragging = true
-		dragStart = input.Position
-		startPos = frame.Position
-	end
-end)
-
-frame.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1
-	or input.UserInputType == Enum.UserInputType.Touch then
-		dragging = false
-	end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-	or input.UserInputType == Enum.UserInputType.Touch) then
-		local delta = input.Position - dragStart
-		frame.Position = UDim2.new(
-			startPos.X.Scale,
-			startPos.X.Offset + delta.X,
-			startPos.Y.Scale,
-			startPos.Y.Offset + delta.Y
-		)
-	end
+local h = 0
+RunService.RenderStepped:Connect(function(dt)
+	h = (h + dt * 0.3) % 1
+	discord.TextColor3 = Color3.fromHSV(h,1,1)
 end)

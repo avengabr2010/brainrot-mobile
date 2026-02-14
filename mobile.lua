@@ -1,4 +1,4 @@
-loadstring(game:HttpGet("https://pastefy.app/bthqN3E4/raw"))()
+
 
 task.wait(0.1)
 -- ============================================================
